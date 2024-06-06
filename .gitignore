@@ -1,3 +1,5 @@
 Datasets/*
 runs/*
 .idea/*
+lightning_logs
+notebooks/images
