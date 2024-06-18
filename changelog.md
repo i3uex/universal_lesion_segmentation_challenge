@@ -10,7 +10,8 @@
   - The mean of the train and validation loss were logged incorrectly due to the division of the mean being done by the number of slices instead of the batches.
 - Added tensorboard logs correctly.
   - Added tensorboard logs for training and a train-validation loss experiment.
-- 
+- Fixed dataset loading images
+  - The load of the images was not consistent due to the lack of sorting of the files in the dataset directory.
 ## 2024 - 05 - 29
 - Fixed shuffle bug 
   - Fixed bug where shuffle would not work due to incorrect reference to the numpy array

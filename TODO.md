@@ -10,3 +10,4 @@
 - Check for transformations in __init__ of CovidDataset instead of __getitem__
 - Add functions to show entire volumes
 - Add check function for test dataset
+- Add multi-gpu training

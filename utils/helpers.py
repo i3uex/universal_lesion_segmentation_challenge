@@ -17,7 +17,7 @@ def load_images_from_path(path: str) -> list[str]:
         It checks each file to ensure it is a file (not a directory) and that it has a .gz extension.
     """
     logging.debug(f"Loading images from {path}")
-    return [str(f) for f in Path(path).iterdir() if f.is_file() and f.suffix == '.gz']
+    return sorted([str(f) for f in Path(path).iterdir() if f.is_file() and f.suffix == '.gz'])
 
 
 def check_dataset(dataset):
