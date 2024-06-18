@@ -1,0 +1,12 @@
+# TODO
+- Possible usage of data augmentation
+- Config class for modularity and configuration of the training
+- Add more comments to the code
+- Add more instructions to the README.md file about the usage of the code
+- Add more models and metrics
+- Add model testing
+- Add start training from checkpoint
+- Review requirements.txt
+- Check for transformations in __init__ of CovidDataset instead of __getitem__
+- Add functions to show entire volumes
+- Add check function for test dataset

@@ -67,14 +67,6 @@ class Net(L.pytorch.LightningModule):
         train_paths = data_dicts[test_split + val_split:]
         val_paths = data_dicts[test_split:test_split + val_split]
         test_paths = data_dicts[:test_split]
-        test_paths = data_dicts[:test_split]
-
-        # Check the dataset
-        print("Checking the dataset")
-        check_dataset(train_paths)
-        check_dataset(val_paths)
-        check_dataset(test_paths)
-        print("Dataset is valid")
 
         # Define the CovidDataset instances for training, validation, and test
         self.training_ds = CovidDataset(volumes=train_paths, hrct_transform=get_hrct_transforms(),
@@ -83,6 +75,11 @@ class Net(L.pytorch.LightningModule):
                                           cbct_transform=get_val_cbct_transforms())
         self.test_ds = CovidDataset(volumes=test_paths, hrct_transform=get_val_hrct_transforms(),
                                     cbct_transform=get_val_cbct_transforms())
+
+        # Check the dataset
+        print("Checking the dataset")
+        check_dataset(self.validation_ds)
+        check_dataset(self.test_ds)
 
     def train_dataloader(self):
         train_dataloader = DataLoader(self.training_ds, batch_size=1, num_workers=4)
@@ -97,93 +94,92 @@ class Net(L.pytorch.LightningModule):
         return test_dataloader
 
     def configure_optimizers(self):
-        optimizer = torch.optim.AdamW(self.model.parameters(), lr=1e-4, weight_decay=1e-5)
+        optimizer = torch.optim.AdamW(self.model.parameters(), lr=1e-3, weight_decay=1e-5)
         return optimizer
 
     def training_step(self, batch, batch_idx):
-        inputs, labels = batch["img"].to(self.device), batch["mask"].to(self.device)
+        inputs, labels = batch["img"], batch["mask"]
         outputs = self.forward(inputs)
-        loss = self.loss_function(outputs, labels)
-        #outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
-        # labels = [self.post_label(i) for i in decollate_batch(labels)]
-        # dice = self.train_dice_metric(y_pred=outputs, y=labels)
-        # train_dictionary = {"loss": loss, "number": len(outputs)}
-        # self.train_step_outputs.append(train_dictionary)
-        tensorboard_logs = {"train_loss": loss.item()}
-        return {"loss": loss, "log": tensorboard_logs}
 
-    # def on_training_epoch_end(self):
-    #     train_loss, num_items = 0, 0
-    #     for output in self.train_step_outputs:
-    #         train_loss += output["loss"].sum().item()
-    #         num_items += output["number"]
-    #
-    #     mean_train_loss = torch.tensor(train_loss / num_items)
-    #     self.log("train_loss", mean_train_loss, prog_bar=True)
-    #     train_dice = self.train_dice_metric.aggregate().item()
-    #     self.train_dice_metric.reset()
-    #     self.log("train_dice", train_dice, prog_bar=True)
-    #
-    #     tensorboard_logs = {
-    #         "train_dice": train_dice,
-    #         "loss": mean_train_loss,
-    #     }
-    #
-    #     self.train_step_outputs.clear()
-    #     return {"log": tensorboard_logs}
+        loss = self.loss_function(outputs, labels)
+        outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
+        labels = [self.post_label(i) for i in decollate_batch(labels)]
+        self.train_dice_metric(y_pred=outputs, y=labels)
+
+        train_loss_dictionary = {"loss": loss}
+        self.train_step_outputs.append(train_loss_dictionary)
+        return train_loss_dictionary
+
+    def on_train_epoch_end(self) -> None:
+        train_loss = 0
+        for output in self.train_step_outputs:
+            train_loss += output["loss"].sum().item()
+
+        mean_train_loss = torch.tensor(train_loss / len(self.train_step_outputs)) # Total loss of batches / number of batches
+        mean_train_dice = self.train_dice_metric.aggregate().item()
+        self.train_dice_metric.reset()
+
+        self.log_dict({"train_dice": mean_train_dice, "train_loss": train_loss / len(self.train_step_outputs)}, prog_bar=True)
+
+        tensorboard_logs = {
+            "train_dice": mean_train_dice,
+            "train_loss": mean_train_loss,
+        }
+
+        self.logger.experiment.add_scalars("losses", {"train": mean_train_loss}, self.current_epoch)
+        self.logger.experiment.add_scalars("dice", {"train": mean_train_dice}, self.current_epoch)
+        self.logger.log_metrics(tensorboard_logs, step=self.current_epoch)
+
+        self.train_step_outputs.clear()
+
 
     def validation_step(self, batch, batch_idx):
         inputs, labels = batch["img"], batch["mask"]
-        roi_size = (64, 64, 64)
+        roi_size = (96, 96, 96)
         sw_batch_size = 4
 
         outputs = sliding_window_inference(inputs, roi_size, sw_batch_size, self.forward)
         loss = self.loss_function(outputs, labels)
         outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
-        # labels = [self.post_label(i) for i in decollate_batch(labels)]
+        labels = [self.post_label(i) for i in decollate_batch(labels)]
         self.dice_metric(y_pred=outputs, y=labels)
 
-        validation_loss_dictionary = {"val_loss": loss, "val_number": len(outputs)}
+        validation_loss_dictionary = {"loss": loss}
         self.validation_step_outputs.append(validation_loss_dictionary)
         return validation_loss_dictionary
 
-    def on_validation_epoch_end(self):
-        val_loss, num_items = 0, 0
+    def on_validation_epoch_end(self) -> None:
+        val_loss = 0
         for output in self.validation_step_outputs:
-            val_loss += output["val_loss"].sum().item()
-            num_items += output["val_number"]
+            val_loss += output["loss"].sum().item()
 
+        mean_val_loss = torch.tensor(val_loss / len(self.validation_step_outputs))
         mean_val_dice = self.dice_metric.aggregate().item()
         self.dice_metric.reset()
-        self.log("val_dice", mean_val_dice, prog_bar=True)
 
-        mean_val_loss = torch.tensor(val_loss / num_items)
-        self.log("val_loss", val_loss / num_items, prog_bar=True)
+        self.log_dict({"val_dice": mean_val_dice, "val_loss": val_loss / len(self.validation_step_outputs)}, prog_bar=True)
+
         tensorboard_logs = {
             "val_dice": mean_val_dice,
             "val_loss": mean_val_loss,
         }
 
+        self.logger.experiment.add_scalars("losses", {"val_loss": mean_val_loss}, self.current_epoch)
+        self.logger.experiment.add_scalars("dice", {"val_dice": mean_val_dice}, self.current_epoch)
+        self.logger.log_metrics(tensorboard_logs, step=self.current_epoch)
+
         if mean_val_dice > self.best_val_dice:
             self.best_val_dice = mean_val_dice
             self.best_val_epoch = self.current_epoch
 
-        # print(
-        #     f"current epoch: {self.current_epoch} "
-        #     f"current mean dice: {mean_val_dice:.4f}"
-        #     f"\nbest mean dice: {self.best_val_dice:.4f} "
-        #     f"at epoch: {self.best_val_epoch}"
-        # )
-
         self.validation_step_outputs.clear()
-        return {"log": tensorboard_logs}
 
 
 def main():
     parser = argparse.ArgumentParser(description="COVID-19 Segmentation")
     parser.add_argument('--architecture', type=str, default='unet', help='Model arch: unet, resnet, etc.')
     parser.add_argument('--metrics', type=str, default='dice', help='Metrics to use: dice, iou, etc.')
-    parser.add_argument('--epochs', type=int, default=200, help='Number of epochs to train')
+    parser.add_argument('--epochs', type=int, default=1300, help='Number of epochs to train')
     parser.add_argument('--batch_size', type=int, default=2, help='Batch size for training')
     parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate for optimizer')
     parser.add_argument('--mask_data_path', type=str, default=INFECTION_MASKS_PATH, help='Path to the dataset')
@@ -194,17 +190,18 @@ def main():
 
     net = Net()
 
-    tensorboard_logger = (L.pytorch.loggers.TensorBoardLogger(save_dir="lightning_logs", name="lightning_logs"))
+    tensorboard_logger = (L.pytorch.loggers.TensorBoardLogger(save_dir="lightning_logs", name="lightning_logs", log_graph=True))
     callbacks = [L.pytorch.callbacks.ModelCheckpoint(monitor="val_loss", save_top_k=1, mode="min")]
 
     trainer = L.pytorch.Trainer(
-        devices="auto",
-        accelerator="auto",
+        devices=[0],
+        accelerator="gpu",
         max_epochs=config.epochs,
         logger=tensorboard_logger,
         callbacks=callbacks,
         log_every_n_steps=14,
         deterministic=True,
+        num_sanity_val_steps=0,
     )
 
     trainer.fit(net)

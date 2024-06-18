@@ -13,7 +13,7 @@ class CovidDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         volume = self.volumes[index]
 
-        if "coronacases" in volume:
+        if "coronacases" in volume["img"]:
             return self.hrct_transform(volume)
         else:
             return self.cbct_transform(volume)

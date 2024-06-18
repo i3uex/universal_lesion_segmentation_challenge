@@ -1,4 +1,16 @@
 # Changelog
+## 2024 - 06 - 18
+- Fixed bug with CovidDataset
+  - Fixed bug where the CovidDataset would not difference between radiopaedia and coronacases due to incorrect usage of dictionary making the coronacases use the radiopaedia transformations.
+- Fixed HRCT transformations bug
+  - HRCT transformations weren't given the correct orientation. Changed from ALI to PLI, so the bed is on the bottom of the image.
+- Fixed validation and test check_function
+  - Fixed bug where the check_function would not work due to the function being nested in another function with the same name. Changed the main function ass well to be called correctly.
+- Fixed bug where the train and validation loss where logged incorrectly.
+  - The mean of the train and validation loss were logged incorrectly due to the division of the mean being done by the number of slices instead of the batches.
+- Added tensorboard logs correctly.
+  - Added tensorboard logs for training and a train-validation loss experiment.
+- 
 ## 2024 - 05 - 29
 - Fixed shuffle bug 
   - Fixed bug where shuffle would not work due to incorrect reference to the numpy array

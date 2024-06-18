@@ -35,20 +35,18 @@ def check_dataset(dataset):
     Returns:
         None
     """
-    # Iterate over the dataset
-    def check_dataset(dataset):
-        radiopaedia = False
-        coronacases = False
-        for i, data in enumerate(dataset):
-            if np.unique(data["mask"]).size == 1 and np.unique(data["mask"])[0] == 0:
-                raise ValueError("The mask has only zeros")
+    radiopaedia = False
+    coronacases = False
+    for i, data in enumerate(dataset):
+        if np.unique(data["mask"]).size == 1 and np.unique(data["mask"])[0] == 0:
+            raise ValueError("The mask has only zeros")
 
-            if "radiopaedia" in dataset.volumes[i]["img"]:
-                radiopaedia = True
-            if "coronacases" in dataset.volumes[i]["img"]:
-                coronacases = True
+        if "radiopaedia" in dataset.volumes[i]["img"]:
+            radiopaedia = True
+        if "coronacases" in dataset.volumes[i]["img"]:
+            coronacases = True
 
-        if not radiopaedia or not coronacases:
-            raise ValueError("There are no radiopaedia or coronacases in the dataset")
+    if not radiopaedia or not coronacases:
+        raise ValueError("There are no radiopaedia or coronacases in the dataset")
 
-        return
+    return
