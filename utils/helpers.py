@@ -50,3 +50,22 @@ def check_dataset(dataset):
         raise ValueError("There are no radiopaedia or coronacases in the dataset")
 
     return
+
+
+def ckpt_path(version: int) -> str:
+    """
+    This function generates the path to the checkpoint file for a given version of the model.
+
+    Args:
+        version (int): The version number of the model.
+
+    Returns:
+        str: The path to the checkpoint file.
+
+    Note:
+        This function uses Python's built-in pathlib library to iterate over the directory contents.
+        It checks each file to ensure it is a file (not a directory) and that it has a .ckpt extension.
+        The function assumes that the checkpoint files are stored in a directory structure like this:
+        `lightning_logs/lightning_logs/version_{version}/checkpoints/`
+    """
+    return [str(f) for f in Path(f"lightning_logs/lightning_logs/version_{version}/checkpoints/").iterdir() if f.is_file() and f.suffix == '.ckpt'][0]

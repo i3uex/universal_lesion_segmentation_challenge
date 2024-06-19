@@ -1,8 +1,7 @@
 import logging
 import argparse
-from lightning.pytorch.utilities.types import TRAIN_DATALOADERS, STEP_OUTPUT
+from lightning.pytorch.utilities.types import TRAIN_DATALOADERS
 from monai.inferers import sliding_window_inference
-from monai.utils import set_determinism
 
 from preprocessing.covid_dataset import CovidDataset
 import monai.data
@@ -12,8 +11,7 @@ from monai.losses import DiceLoss
 from preprocessing.transforms import get_hrct_transforms, get_cbct_transforms, \
     get_val_hrct_transforms, get_val_cbct_transforms
 from utils.helpers import load_images_from_path, check_dataset
-from config.constants import (COVID_CASES_PATH, INFECTION_MASKS_PATH, SEED)
-from config.config import Config
+from config.constants import (COVID_CASES_PATH, INFECTION_MASKS_PATH, SEED, VALIDATION_INFERENCE_ROI_SIZE)
 import torch
 import numpy as np
 from monai.metrics import DiceMetric
@@ -22,16 +20,18 @@ import lightning as L
 class Net(L.pytorch.LightningModule):
     def __init__(self):
         super(Net, self).__init__()
+        self.save_hyperparameters()
         self.model = UNet(
             spatial_dims=3,
             in_channels=1,
             out_channels=1,
             channels=(16, 32, 64, 128, 256),
             strides=(2, 2, 2, 2),
+            num_res_units=2
         )
         self.dice_metric = DiceMetric(include_background=False, reduction="mean")
         self.train_dice_metric = DiceMetric(include_background=False, reduction="mean")
-        self.loss_function = monai.losses.DiceLoss(sigmoid=True)
+        self.loss_function = monai.losses.GeneralizedDiceLoss(sigmoid=True, include_background=False)
         self.post_pred = monai.transforms.Compose(
             [monai.transforms.Activations(sigmoid=True), monai.transforms.AsDiscrete(threshold_values=0.5)])
         self.post_label = monai.transforms.Compose([monai.transforms.AsDiscrete(threshold_values=0.5)])
@@ -132,10 +132,9 @@ class Net(L.pytorch.LightningModule):
 
         self.train_step_outputs.clear()
 
-
     def validation_step(self, batch, batch_idx):
         inputs, labels = batch["img"], batch["mask"]
-        roi_size = (96, 96, 96)
+        roi_size = VALIDATION_INFERENCE_ROI_SIZE
         sw_batch_size = 4
 
         outputs = sliding_window_inference(inputs, roi_size, sw_batch_size, self.forward)
@@ -184,6 +183,8 @@ def main():
     parser.add_argument('--learning_rate', type=float, default=0.001, help='Learning rate for optimizer')
     parser.add_argument('--mask_data_path', type=str, default=INFECTION_MASKS_PATH, help='Path to the dataset')
     parser.add_argument('--verbose', type=str, help='Select output verbosity [INFO, DEBUG, ERROR, WARNING]')
+    parser.add_argument('--seed', type=int, default=SEED, help='Seed for reproducibility')
+    parser.add_argument('--checkpoint', type=int, help='Path to model checkpoint')
     config = parser.parse_args()
 
     L.seed_everything(SEED)
@@ -204,9 +205,11 @@ def main():
         num_sanity_val_steps=0,
     )
 
-    trainer.fit(net)
+    trainer.fit(net, ckpt_path=config.checkpoint)
 
     print(f"Train completed, best_metric: {net.best_val_dice:.4f} " f"at epoch {net.best_val_epoch}")
+
+    # trainer.test(dataloaders=net.test_dataloader(), ckpt_path="best")
 
 
 if __name__ == '__main__':
