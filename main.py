@@ -3,6 +3,8 @@ import argparse
 from lightning.pytorch.utilities.types import TRAIN_DATALOADERS
 from monai.inferers import sliding_window_inference
 
+import nets.nets
+from config.config import Config
 from preprocessing.covid_dataset import CovidDataset
 import monai.data
 from monai.data import DataLoader, decollate_batch
@@ -11,24 +13,20 @@ from monai.losses import DiceLoss
 from preprocessing.transforms import get_hrct_transforms, get_cbct_transforms, \
     get_val_hrct_transforms, get_val_cbct_transforms
 from utils.helpers import load_images_from_path, check_dataset
-from config.constants import (COVID_CASES_PATH, INFECTION_MASKS_PATH, SEED, VALIDATION_INFERENCE_ROI_SIZE)
+from config.constants import (COVID_CASES_PATH, INFECTION_MASKS_PATH, SEED, VALIDATION_INFERENCE_ROI_SIZE, SPATIAL_SIZE,
+                              LUNG_MASKS_PATH)
 import torch
 import numpy as np
 from monai.metrics import DiceMetric
 import lightning as L
 
+torch.set_float32_matmul_precision('high')
+
 class Net(L.pytorch.LightningModule):
     def __init__(self):
         super(Net, self).__init__()
         self.save_hyperparameters()
-        self.model = UNet(
-            spatial_dims=3,
-            in_channels=1,
-            out_channels=1,
-            channels=(16, 32, 64, 128, 256),
-            strides=(2, 2, 2, 2),
-            num_res_units=2
-        )
+        self.model = nets.nets.covid_unetr
         self.dice_metric = DiceMetric(include_background=False, reduction="mean")
         self.train_dice_metric = DiceMetric(include_background=False, reduction="mean")
         self.loss_function = monai.losses.GeneralizedDiceLoss(sigmoid=True, include_background=False)
@@ -50,7 +48,7 @@ class Net(L.pytorch.LightningModule):
         # Load images and masks
         logging.info(f"Loading images from {COVID_CASES_PATH}")
         images = load_images_from_path(COVID_CASES_PATH)
-        labels = load_images_from_path(INFECTION_MASKS_PATH)
+        labels = load_images_from_path(LUNG_MASKS_PATH)
 
         # Convert images and masks to a list of dictionaries with keys "img" and "mask"
         data_dicts = np.array([{"img": img, "mask": mask} for img, mask in zip(images, labels)])
@@ -104,7 +102,12 @@ class Net(L.pytorch.LightningModule):
         loss = self.loss_function(outputs, labels)
         outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
         labels = [self.post_label(i) for i in decollate_batch(labels)]
-        self.train_dice_metric(y_pred=outputs, y=labels)
+        train_dice_step = self.train_dice_metric(y_pred=outputs, y=labels)
+
+        # Take the mean of the tensor before logging it
+        # train_dice_step_mean = train_dice_step.mean()
+        #
+        # self.log('train_dice', train_dice_step_mean, on_step=True, on_epoch=True, prog_bar=True, logger=True)
 
         train_loss_dictionary = {"loss": loss}
         self.train_step_outputs.append(train_loss_dictionary)
@@ -173,10 +176,39 @@ class Net(L.pytorch.LightningModule):
 
         self.validation_step_outputs.clear()
 
+    def test_step(self, batch, batch_idx):
+            inputs, labels = batch["img"], batch["mask"]
+            roi_size = VALIDATION_INFERENCE_ROI_SIZE
+            sw_batch_size = 4
+
+            outputs = sliding_window_inference(inputs, roi_size, sw_batch_size, self.forward)
+            loss = self.loss_function(outputs, labels)
+            outputs = [self.post_pred(i) for i in decollate_batch(outputs)]
+            labels = [self.post_label(i) for i in decollate_batch(labels)]
+            self.dice_metric(y_pred=outputs, y=labels)
+
+            return {"test_loss": loss}
+
+    def test_epoch_end(self, outputs):
+        test_loss = torch.stack([x["test_loss"] for x in outputs]).mean()
+        test_dice = self.dice_metric.aggregate().item()
+        self.dice_metric.reset()
+
+        self.log_dict({"test_dice": test_dice, "test_loss": test_loss}, prog_bar=True)
+
+        tensorboard_logs = {
+            "test_dice": test_dice,
+            "test_loss": test_loss,
+        }
+
+        self.logger.experiment.add_scalars("losses", {"test_loss": test_loss}, self.current_epoch)
+        self.logger.experiment.add_scalars("dice", {"test_dice": test_dice}, self.current_epoch)
+        self.logger.log_metrics(tensorboard_logs, step=self.current_epoch)
+
 
 def main():
     parser = argparse.ArgumentParser(description="COVID-19 Segmentation")
-    parser.add_argument('--architecture', type=str, default='unet', help='Model arch: unet, resnet, etc.')
+    parser.add_argument('--architecture', type=str, default='unetr', help='Model arch: unet, resnet, etc.')
     parser.add_argument('--metrics', type=str, default='dice', help='Metrics to use: dice, iou, etc.')
     parser.add_argument('--epochs', type=int, default=1300, help='Number of epochs to train')
     parser.add_argument('--batch_size', type=int, default=2, help='Batch size for training')
@@ -191,7 +223,7 @@ def main():
 
     net = Net()
 
-    tensorboard_logger = (L.pytorch.loggers.TensorBoardLogger(save_dir="lightning_logs", name="lightning_logs", log_graph=True))
+    tensorboard_logger = (L.pytorch.loggers.TensorBoardLogger(save_dir="lightning_logs", name="lightning_logs"))
     callbacks = [L.pytorch.callbacks.ModelCheckpoint(monitor="val_loss", save_top_k=1, mode="min")]
 
     trainer = L.pytorch.Trainer(
@@ -209,7 +241,7 @@ def main():
 
     print(f"Train completed, best_metric: {net.best_val_dice:.4f} " f"at epoch {net.best_val_epoch}")
 
-    # trainer.test(dataloaders=net.test_dataloader(), ckpt_path="best")
+    trainer.test(dataloaders=net.test_dataloader(), ckpt_path="best")
 
 
 if __name__ == '__main__':
