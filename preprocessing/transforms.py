@@ -1,7 +1,6 @@
 import monai
-
 from config.constants import LOWER_BOUND_WINDOW_HRCT, UPPER_BOUND_WINDOW_HRCT, LOWER_BOUND_WINDOW_CBCT, \
-    UPPER_BOUND_WINDOW_CBCT, SPATIAL_SIZE, NUM_RAND_PATCHES
+    UPPER_BOUND_WINDOW_CBCT, SPATIAL_SIZE, NUM_RAND_PATCHES, IMG_SIZE
 
 
 def get_hrct_transforms():
@@ -14,13 +13,14 @@ def get_hrct_transforms():
             monai.transforms.RandCropByPosNegLabeld(keys=('img', 'mask'), label_key="mask",
                                                     spatial_size=SPATIAL_SIZE, pos=1, neg=1,
                                                     num_samples=NUM_RAND_PATCHES, allow_smaller=True),
-            # monai.transforms.SpatialPadd(keys=('img', 'mask'), spatial_size=SPATIAL_SIZE, method='symmetric'),
+            monai.transforms.SpatialPadd(keys=('img', 'mask'), spatial_size=SPATIAL_SIZE, method='symmetric'),
 
             monai.transforms.RandFlipd(keys=('img', 'mask'), prob=0.1, spatial_axis=0),
             monai.transforms.RandFlipd(keys=('img', 'mask'), prob=0.1, spatial_axis=1),
             monai.transforms.RandFlipd(keys=('img', 'mask'), prob=0.1, spatial_axis=2),
-            monai.transforms.RandZoomd(keys=('img', 'mask'), prob=0.5, min_zoom=0.9, max_zoom=1.1),
+            monai.transforms.RandZoomd(keys=('img', 'mask'), prob=0.2, min_zoom=0.9, max_zoom=1.1),
             monai.transforms.RandRotate90d(keys=('img', 'mask'), prob=0.1, max_k=3, spatial_axes=(0, 1)),
+            # monai.transforms.RandGaussianNoised(keys=('img',), prob=0.5),
 
             monai.transforms.ToTensord(keys=("img", "mask")),
         ]
@@ -36,13 +36,14 @@ def get_cbct_transforms():
             monai.transforms.RandCropByPosNegLabeld(keys=('img', 'mask'), label_key="mask",
                                                     spatial_size=SPATIAL_SIZE, pos=1, neg=1,
                                                     num_samples=NUM_RAND_PATCHES, allow_smaller=True),
-            # monai.transforms.SpatialPadd(keys=('img', 'mask'), spatial_size=SPATIAL_SIZE, method='symmetric'),
+            monai.transforms.SpatialPadd(keys=('img', 'mask'), spatial_size=SPATIAL_SIZE, method='symmetric'),
 
             monai.transforms.RandFlipd(keys=('img', 'mask'), prob=0.1, spatial_axis=0),
             monai.transforms.RandFlipd(keys=('img', 'mask'), prob=0.1, spatial_axis=1),
             monai.transforms.RandFlipd(keys=('img', 'mask'), prob=0.1, spatial_axis=2),
-            monai.transforms.RandZoomd(keys=('img', 'mask'), prob=0.5, min_zoom=0.9, max_zoom=1.1),
+            monai.transforms.RandZoomd(keys=('img', 'mask'), prob=0.2, min_zoom=0.9, max_zoom=1.1),
             monai.transforms.RandRotate90d(keys=('img', 'mask'), prob=0.1, max_k=3, spatial_axes=(0, 1)),
+            # monai.transforms.RandGaussianNoised(keys=('img',), prob=0.5),
 
             monai.transforms.ToTensord(keys=("img", "mask")),
         ]

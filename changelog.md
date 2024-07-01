@@ -1,4 +1,15 @@
 # Changelog
+## 2024 - 07 - 01
+- Fixed bug with AsDiscrete transformation.
+  - Fixed bug where the AsDiscrete transformation would not work due to the usage of the parameter `threshold_values` instead of `threshold`.
+- Added configuration of trainning process
+  - Added functionality for config class, and added configuration for the training process with the `configure_training_process` process in the `main.py` file
+  - Added a nets folder with the configuration of the networks
+- Changed the percentage for validation and test to 20% and 10%
+  - Changed the percentage of the validation and test to 20% and 10% respectively. Train is still 70%.
+- Changed optimizer to Adam
+  - Changed the optimizer from AdamW to Adam for simplicity.
+- Added the logging of the metrics by step
 ## 2024 - 06 - 18
 - Fixed bug with CovidDataset
   - Fixed bug where the CovidDataset would not difference between radiopaedia and coronacases due to incorrect usage of dictionary making the coronacases use the radiopaedia transformations.
