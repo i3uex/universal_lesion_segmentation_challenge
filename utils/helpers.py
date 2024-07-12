@@ -69,3 +69,4 @@ def ckpt_path(version: int) -> str:
         `lightning_logs/lightning_logs/version_{version}/checkpoints/`
     """
     return [str(f) for f in Path(f"lightning_logs/lightning_logs/version_{version}/checkpoints/").iterdir() if f.is_file() and f.suffix == '.ckpt'][0]
+
