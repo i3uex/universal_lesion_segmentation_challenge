@@ -1,8 +1,20 @@
 # Changelog
+## 2024 - 07 - 12
+- Added loss functions and learning rate to config class
+  - Added the loss functions to the file `loss_functions.py` and learning rate to the config class for better configuration of the training process.
+- Fixed bug with normalization of the intensity of the volumes.
+  - Fixed bug where the normalization of the intensity of the volumes would not work due to the incorrect usage of the functions.
+  - ScaleIntensityRange was changed to ScaleIntensity in coronacases transformations, with previous ThresholdIntensityd transformations.
+  - ScaleIntensity transformations in case of radiopaedia were modified due to the incorrect usage of the parameters.
+- Added preprocessing file for the spacing of the volumes
+  - Added a `preprocess_spacing.py` for the preprocessing of the spacing of the volumes for lowering RAM usage during training.
+  - Changed the `CovidDataset` to use be PersistentDataset instead of Dataset for better performance trying to lower the RAM usage.
+- Added custom callback for measuring the training time
+  - Added a custom callback for measuring the training time of the model.
 ## 2024 - 07 - 01
 - Fixed bug with AsDiscrete transformation.
   - Fixed bug where the AsDiscrete transformation would not work due to the usage of the parameter `threshold_values` instead of `threshold`.
-- Added configuration of trainning process
+- Added configuration of training process
   - Added functionality for config class, and added configuration for the training process with the `configure_training_process` process in the `main.py` file
   - Added a nets folder with the configuration of the networks
 - Changed the percentage for validation and test to 20% and 10%
