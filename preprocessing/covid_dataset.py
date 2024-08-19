@@ -13,9 +13,8 @@ class CovidDataset(monai.data.PersistentDataset):
 
     def __getitem__(self, index):
         volume = self.volumes[index]
-
-        if "coronacases" in volume["img"]:
-            return self.hrct_transform(volume)
-        else:
+        if "radiopaedia" in volume["img"]:
             return self.cbct_transform(volume)
+        else:
+            return self.hrct_transform(volume)
 

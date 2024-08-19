@@ -1,12 +1,6 @@
 # TODO
-- Possible usage of data augmentation
-- Config class for modularity and configuration of the training
 - Add more comments to the code
 - Add more instructions to the README.md file about the usage of the code
-- Add more models and metrics
-- Add model testing
-- Add start training from checkpoint
 - Review requirements.txt
-- Add functions to show entire volumes
-- Add check function for test dataset
-- Add multi-gpu training
+- Add functions to show test results in 3D
+- Add check functions for datasets

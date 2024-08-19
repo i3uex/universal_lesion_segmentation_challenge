@@ -1,7 +1,7 @@
 import logging
 import sys
 
-from config.constants import INFECTION_MASKS_PATH, SEED
+from config.constants import ZENODO_INFECTION_MASKS_PATH, SEED
 from experiments_items.nets import *
 from experiments_items.loss_functions import *
 import argparse
@@ -14,7 +14,7 @@ class Config:
         self.parser.add_argument('--epochs', type=int, default=1300, help='Number of epochs to train')
         self.parser.add_argument('--batch_size', type=int, default=2, help='Batch size for training')
         self.parser.add_argument('--learning_rate', type=float, default=1e-3, help='Learning rate for optimizer')
-        self.parser.add_argument('--mask_data_path', type=str, default=INFECTION_MASKS_PATH, help='Path to the dataset')
+        self.parser.add_argument('--mask_data_path', type=str, default=ZENODO_INFECTION_MASKS_PATH, help='Path to the dataset')
         self.parser.add_argument('--verbose', type=str, help='Select output verbosity [INFO, DEBUG, ERROR, WARNING]')
         self.parser.add_argument('--seed', type=int, default=SEED, help='Seed for reproducibility')
         self.args = self.parser.parse_args()
@@ -57,7 +57,7 @@ class Config:
         elif self.args.loss == 'dice':
             return dice_loss
         elif self.args.loss == 'hausdorff':
-            return haussdorf_loss
+            return hausdorf_loss
         elif self.args.loss == 'generalizeddicefocal':
             return generalize_dice_focal_loss
 

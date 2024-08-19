@@ -1,11 +1,12 @@
 import os
 
 import monai
-from config.constants import SPACING, COVID_CASES_PATH, INFECTION_MASKS_PATH
-from utils.helpers import load_images_from_path
+from config.constants import SPACING, ZENODO_COVID_CASES_PATH, ZENODO_INFECTION_MASKS_PATH, STUDIES_COVID_CASES_PATH, \
+    DATASET_VOLUMES_WITH_MASK_RANGE, STUDIES_INFECTION_MASKS_PATH
+from utils.helpers import load_images_from_path, get_volumes_in_range
 import numpy as np
 
-PATH = "Datasets/preprocessed/"
+PATH = "Datasets/preprocessed_2/"
 
 class SpacingDataset(monai.data.PersistentDataset):
     def __init__(self, volumes, transform=None):
@@ -37,6 +38,8 @@ def store_volume_to_nifti(volume, path, volume_name):
 
     print("Storing volume to nifti: ", volume_name)
     print("Image shape: ", img.shape)
+    with open(path + "/shapes.txt", "a") as f:
+        f.write(volume_name + ": " + str(img.shape) + "\n")
 
     img_writer.set_data_array(img, channel_dim=0)
     img_writer.write(path + "images/" + volume_name, verbose=True)
@@ -46,10 +49,16 @@ def store_volume_to_nifti(volume, path, volume_name):
 
 
 def main():
-    images = load_images_from_path(COVID_CASES_PATH)
-    labels = load_images_from_path(INFECTION_MASKS_PATH)
+    images_zenodo = load_images_from_path(ZENODO_COVID_CASES_PATH)
+    labels_zenodo = load_images_from_path(ZENODO_INFECTION_MASKS_PATH)
 
-    data_dicts = np.array([{"img": img, "mask": mask} for img, mask in zip(images, labels)])
+    images_studies = get_volumes_in_range(STUDIES_COVID_CASES_PATH, DATASET_VOLUMES_WITH_MASK_RANGE)
+    labels_studies = load_images_from_path(STUDIES_INFECTION_MASKS_PATH)
+
+    images = images_zenodo + images_studies
+    labels = labels_zenodo + labels_studies
+
+    data_dicts_zenodo = np.array([{"img": img, "mask": mask} for img, mask in zip(images, labels)])
 
     if not os.path.exists(PATH):
         os.mkdir(PATH)
@@ -58,9 +67,9 @@ def main():
     if not os.path.exists(PATH + "labels"):
         os.mkdir(PATH + "labels")
 
-    for i in range(len(data_dicts)):
-        dataset = SpacingDataset(volumes=[data_dicts[i]], transform=get_spacing_transforms())
-        volume_name = data_dicts[i]["img"].split("/")[-1]
+    for i in range(len(data_dicts_zenodo)):
+        dataset = SpacingDataset(volumes=[data_dicts_zenodo[i]], transform=get_spacing_transforms())
+        volume_name = data_dicts_zenodo[i]["img"].split("/")[-1]
         store_volume_to_nifti(dataset[0], PATH, volume_name)
 
 

@@ -1,21 +1,27 @@
-COVID_CASES_PATH = "Datasets/Zenodo/COVID-19-CT-Seg_20cases/"
-INFECTION_MASKS_PATH = "Datasets/Zenodo/Infection_Mask/"
-LUNG_MASKS_PATH = "Datasets/Zenodo/Lung_Mask/"
-LUNG_AND_INFECTION_MASKS_PATH = "Datasets/Zenodo/Lung_and_Infection_Mask/"
+ZENODO_COVID_CASES_PATH = "Datasets/Zenodo/COVID-19-CT-Seg_20cases/"
+ZENODO_INFECTION_MASKS_PATH = "Datasets/Zenodo/Infection_Mask/"
+ZENODO_LUNG_MASKS_PATH = "Datasets/Zenodo/Lung_Mask/"
+ZENODO_LUNG_AND_INFECTION_MASKS_PATH = "Datasets/Zenodo/Lung_and_Infection_Mask/"
 
-COVID_PREPROCESSED_CASES_PATH = "Datasets/preprocessed/images/"
-INFECTION_PREPROCESSED_MASKS_PATH = "Datasets/preprocessed/labels/"
+STUDIES_COVID_CASES_PATH = "Datasets/COVID19_1110/studies/"
+STUDIES_INFECTION_MASKS_PATH = "Datasets/COVID19_1110/masks/"
+
+COVID_PREPROCESSED_CASES_PATH = "Datasets/preprocessed_2/images/"
+INFECTION_PREPROCESSED_MASKS_PATH = "Datasets/preprocessed_2/labels/"
+
+
+DATASET_VOLUMES_WITH_MASK_RANGE = ("0255", "0304")
 
 EXPERIMENTS_PATH = "Experiments/"
 SEED = 420
 IMG_SIZE = (512, 512)
 VALIDATION_INFERENCE_ROI_SIZE = (64,) * 3
 SPATIAL_SIZE = (64,) * 3  # In case of changing it, remember to take into account the padding in the transforms
-NUM_RAND_PATCHES = 16
+NUM_RAND_PATCHES = 8
 LEVEL = -650
 WIDTH = 1500
-SPACING = (0.6836,)*3
-LOWER_BOUND_WINDOW_HRCT = LEVEL - (WIDTH // 2)
-UPPER_BOUND_WINDOW_HRCT = LEVEL + (WIDTH // 2)
+SPACING = (0.7185, 0.7185, 6.0)
+LOWER_BOUND_WINDOW_HRCT = -1000 #LEVEL - (WIDTH // 2) JUSTIFICAR ARTÍCULO
+UPPER_BOUND_WINDOW_HRCT = 400 #LEVEL + (WIDTH // 2)
 LOWER_BOUND_WINDOW_CBCT = 0.0
 UPPER_BOUND_WINDOW_CBCT = 255.0
