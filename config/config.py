@@ -6,6 +6,24 @@ from experiments_items.nets import *
 from experiments_items.loss_functions import *
 import argparse
 
+HELP_MESSAGE = '''
+COVID-19 Segmentation
+---------------------
+This script is used to train a model to segment COVID-19 infections in CT scans.
+The script uses a U-Net architecture and the Dice loss function by default.
+
+Arguments:
+    --architecture: Model arch: unet, unetr, swin_unet.
+    --loss: Loss function to use: dice, crossentropy, hausdorff, generalizeddicefocal.
+    --epochs: Number of epochs to train
+    --batch_size: Batch size for training
+    --learning_rate: Learning rate for optimizer
+    --mask_data_path: Path to the dataset
+    --verbose: Select output verbosity [INFO, DEBUG, ERROR, WARNING]
+    --seed: Seed for reproducibility
+    --help: Show this help message and exit
+'''
+
 class Config:
     def __init__(self):
         self.parser = argparse.ArgumentParser(description="COVID-19 Segmentation")

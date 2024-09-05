@@ -31,7 +31,7 @@ from monai.metrics import DiceMetric
 import lightning as L
 import matplotlib.pyplot as plt
 
-torch.set_float32_matmul_precision('high')
+# torch.set_float32_matmul_precision('high')
 
 
 class Net(L.pytorch.LightningModule):

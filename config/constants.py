@@ -9,6 +9,7 @@ STUDIES_INFECTION_MASKS_PATH = "Datasets/COVID19_1110/masks/"
 COVID_PREPROCESSED_CASES_PATH = "Datasets/preprocessed_2/images/"
 INFECTION_PREPROCESSED_MASKS_PATH = "Datasets/preprocessed_2/labels/"
 
+DECATLON_DATASET_PATH = "Datasets/Decatlon/Task06_Lung/"
 
 DATASET_VOLUMES_WITH_MASK_RANGE = ("0255", "0304")
 
